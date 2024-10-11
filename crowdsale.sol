@@ -45,4 +45,60 @@ contract SimpleCrowdSale {
       isRefundedAllowed = false;
       owner = msg.sender;
     }
+
+    function isValidInvestment(uint256 _investment)internal view returns(bool){
+      bool nonZeroInvestment = _investment != 0;
+      bool withinCrowdSalePeriod = block.timestamp >= startTime && block.timestamp <= endTime;
+      return nonZeroInvestment && withinCrowdSalePeriod
+    }
+
+    function CalculateNumberOfTokens(uint256 _investment)internal returns (uint256){
+      return _investment / weiTokenPrice;
+    }
+
+    function AssignTokens(address _beneficiary, uint256 _investment)internal{
+      uint256 _numberofTokens = CalculateNumberOfTokens(_investment);
+      crowdSaleToken.mint(_beneficiary, _numberofTokens);
+    }
+
+    event LogInvestment(address indexed investor, uint256 value);
+    event LogTokenAssignment(address indexed investor, uint256 numTokens);
+
+    function Invest(address _beneficiary) public payable{
+      require(isValidInvestment(msg.value));
+      address investor = msg.sender;
+      uint256 investment = msg.value;
+      investmentAmountOf[investor] += investment;
+      investmentReceived += investment;
+      AssignTokens(investor, investment);
+      emit LogInvestment(investor, investment);
+    }
+
+    function Finalize()public onlyOwner{
+      if(isFinalized) revert();
+      bool isCrowdSaleComplete = block.timestamp > endTime;
+      bool investmentObjective = investmentReceived >= weiInvestmentObjective;
+
+      if(isCrowdSaleComplete){
+        if(investmentObjective){
+          crowdSaleToken.release();
+        }else{
+          isRefundedAllowed = true;
+        }
+        isFinalized = true;
+      }
+    }
+
+    event Refund(address investor, uint256 value);
+    function refund() public{
+      if(!isRefundedAllowed) revert();
+      // payable funciona para decir que una direccion puede recibir ethereum
+      address payable investor = payable(msg.sender);
+      uint256 investment = investmentAmountOf[investor];
+      if(investment == 0) revert();
+      investmentAmountOf[investor] = 0;
+      investRefunded += investment;
+      emit Refund(msg.sender, investment);
+      if(!investor.send(investment)) revert(); 
+    }
 }
