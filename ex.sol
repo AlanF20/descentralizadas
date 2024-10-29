@@ -28,7 +28,7 @@ contract Token{
     _;
   }
 
-  constructor (uint256 _initialSupply) public {
+  constructor () {
     owner = msg.sender; 
   }
 }

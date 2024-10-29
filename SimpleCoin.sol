@@ -10,7 +10,7 @@ contract SimpleCoin{
   event FreezeAccount(address target, bool isFrozen);
   bool isReleased;
 
-  constructor(uint256 _initialSupply) public {
+  constructor(uint256 _initialSupply) {
     owner = msg.sender;
     isReleased = false;
     mint(owner, _initialSupply);
